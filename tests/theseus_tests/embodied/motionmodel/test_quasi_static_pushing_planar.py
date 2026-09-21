@@ -86,12 +86,15 @@ def test_error_quasi_static_pushing_planar_se2():
             f"actual: {actual.squeeze().numpy()}, expected: {expected.squeeze().numpy()}"
         )
         assert np.allclose(actual.squeeze().numpy(), expected.squeeze().numpy())
-        assert torch.allclose(actual, actual2)
+        torch.testing.assert_close(
+            actual,
+            actual2,
+            rtol=1e-05,
+            atol=1e-08,
+        )
 
 
-def test_quasi_static_pushing_planar_jacobians():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_quasi_static_pushing_planar_jacobians(rng):
     for _ in range(10):  # repeat a bunch of times
         for batch_size in BATCH_SIZES_TO_TEST:
             obj1 = create_random_se2(batch_size, rng)
@@ -116,10 +119,4 @@ def test_quasi_static_pushing_planar_jacobians():
                 new_error_fn, [obj1, obj2, eff1, eff2], delta_mag=1e-6
             )
 
-            def _check_jacobian(actual_, expected_):
-                # This makes failures more explicit than torch.allclose()
-                diff = (expected_ - actual_).norm(p=float("inf"))
-                assert diff < 1e-5
-
-            for i in range(len(expected_jacs)):
-                _check_jacobian(jacobians[i], expected_jacs[i])
+            torch.testing.assert_close(jacobians, expected_jacs, atol=1e-5, rtol=0)

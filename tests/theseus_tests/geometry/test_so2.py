@@ -8,8 +8,8 @@ import pytest  # noqa: F401
 import torch
 
 import theseus as th
-from theseus.constants import EPS
 from tests.theseus_tests.core.common import check_copy_var
+from theseus.constants import EPS
 from theseus.utils import numeric_jacobian
 
 from .common import (
@@ -47,9 +47,7 @@ def test_log_map():
         check_projection_for_log_map(theta, th.SO2, enable_functorch=True)
 
 
-def test_compose():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_compose(rng):
     for batch_size in BATCH_SIZES_TO_TEST:
         so2_1 = th.SO2.rand(batch_size, generator=rng, dtype=torch.float64)
         so2_2 = th.SO2.rand(batch_size, generator=rng, dtype=torch.float64)
@@ -57,18 +55,14 @@ def test_compose():
         check_compose(so2_1, so2_2, enable_functorch=True)
 
 
-def test_inverse():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_inverse(rng):
     for batch_size in BATCH_SIZES_TO_TEST:
         so2 = th.SO2.rand(batch_size, generator=rng, dtype=torch.float64)
         check_inverse(so2, enable_functorch=False)
         check_inverse(so2, enable_functorch=True)
 
 
-def test_rotate_and_unrotate():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_rotate_and_unrotate(rng):
     for _ in range(10):  # repeat a few times
         for batch_size_so2 in BATCH_SIZES_TO_TEST:
             for batch_size_pnt in BATCH_SIZES_TO_TEST:
@@ -90,10 +84,18 @@ def test_rotate_and_unrotate():
                 unrotated_point = so2.unrotate(rotated_point, jacobians_unrotate)
 
                 # Check the operation result
-                assert torch.allclose(
-                    expected_rotated_data.squeeze(2), rotated_point.tensor, atol=EPS
+                torch.testing.assert_close(
+                    *torch.broadcast_tensors(
+                        expected_rotated_data.squeeze(2), rotated_point.tensor
+                    ),
+                    atol=EPS,
+                    rtol=1e-05,
                 )
-                assert torch.allclose(point_tensor, unrotated_point.tensor, atol=EPS)
+                torch.testing.assert_close(
+                    *torch.broadcast_tensors(point_tensor, unrotated_point.tensor),
+                    atol=EPS,
+                    rtol=1e-05,
+                )
 
                 # Check the jacobians
                 # function_dim = 2 because rotate(theta, (x, y)) --> (x_new, y_new)
@@ -103,25 +105,27 @@ def test_rotate_and_unrotate():
                     function_dim=2,
                 )
 
-                assert jacobians_rotate[0].shape == expected_jac[0].shape
-                assert jacobians_rotate[1].shape == expected_jac[1].shape
-                assert torch.allclose(jacobians_rotate[0], expected_jac[0])
-                assert torch.allclose(jacobians_rotate[1], expected_jac[1])
+                torch.testing.assert_close(
+                    jacobians_rotate,
+                    expected_jac,
+                    rtol=1e-05,
+                    atol=1e-08,
+                )
 
                 expected_jac = numeric_jacobian(
                     lambda groups: groups[0].unrotate(groups[1]),
                     [so2, rotated_point],
                     function_dim=2,
                 )
-                assert jacobians_unrotate[0].shape == expected_jac[0].shape
-                assert jacobians_unrotate[1].shape == expected_jac[1].shape
-                assert torch.allclose(jacobians_unrotate[0], expected_jac[0])
-                assert torch.allclose(jacobians_unrotate[1], expected_jac[1])
+                torch.testing.assert_close(
+                    jacobians_unrotate,
+                    expected_jac,
+                    rtol=1e-05,
+                    atol=1e-08,
+                )
 
 
-def test_adjoint():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_adjoint(rng):
     for batch_size in BATCH_SIZES_TO_TEST:
         so2 = th.SO2.rand(batch_size, generator=rng, dtype=torch.float64)
         tangent = torch.randn(batch_size, 1).double()
@@ -129,16 +133,12 @@ def test_adjoint():
         check_adjoint(so2, tangent, enable_functorch=True)
 
 
-def test_copy():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_copy(rng):
     so2 = th.SO2.rand(1, generator=rng, dtype=torch.float64)
     check_copy_var(so2)
 
 
-def test_projection():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_projection(rng):
     for _ in range(10):  # repeat a few times
         for batch_size in BATCH_SIZES_TO_TEST:
             # Test SO2.rotate
@@ -158,10 +158,7 @@ def test_projection():
             check_projection_for_inverse(th.SO2, batch_size, rng)
 
 
-def test_local_map():
-    rng = torch.Generator()
-    rng.manual_seed(0)
-
+def test_local_map(rng):
     for batch_size in BATCH_SIZES_TO_TEST:
         group0 = th.SO2.rand(batch_size)
         group1 = th.SO2.rand(batch_size)

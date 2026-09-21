@@ -8,8 +8,8 @@ import pytest  # noqa: F401
 import torch
 
 import theseus as th
-from theseus.constants import EPS
 from tests.theseus_tests.core.common import check_copy_var
+from theseus.constants import EPS
 
 from .common import (
     BATCH_SIZES_TO_TEST,
@@ -26,11 +26,21 @@ def test_item():
         for j in range(1, 5):
             t1 = torch.rand(i, j)
             v1 = th.Vector(tensor=t1.clone(), name="v1")
-            assert torch.allclose(v1.tensor, t1)
+            torch.testing.assert_close(
+                v1.tensor,
+                t1,
+                rtol=1e-05,
+                atol=1e-08,
+            )
             v1[0, 0] = 11.1
             assert not torch.allclose(v1.tensor, t1)
             t1[0, 0] = 11.1
-            assert torch.allclose(v1.tensor, t1)
+            torch.testing.assert_close(
+                v1.tensor,
+                t1,
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
 
 def test_add():
@@ -41,8 +51,18 @@ def test_add():
             t2 = torch.rand(i, j)
             v2 = th.Vector(tensor=t2.clone(), name="v2")
             vsum = th.Vector(tensor=t1 + t2)
-            assert (v1 + v2).allclose(vsum)
-            assert v1.compose(v2).allclose(vsum)
+            torch.testing.assert_close(
+                (v1 + v2).tensor,
+                vsum.tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                v1.compose(v2).tensor,
+                vsum.tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
 
 def test_sub():
@@ -52,9 +72,19 @@ def test_sub():
             v1 = th.Vector(tensor=t1.clone(), name="v1")
             t2 = torch.rand(i, j)
             v2 = th.Vector(tensor=t2.clone(), name="v2")
-            assert (v1 - v2).allclose(th.Vector(tensor=t1 - t2))
+            torch.testing.assert_close(
+                (v1 - v2).tensor,
+                th.Vector(tensor=t1 - t2).tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
             v2 = -v2
-            assert (v1 + v2).allclose(th.Vector(tensor=t1 - t2))
+            torch.testing.assert_close(
+                (v1 + v2).tensor,
+                th.Vector(tensor=t1 - t2).tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
 
 def test_mul():
@@ -62,8 +92,18 @@ def test_mul():
         for j in range(1, 5):
             t1 = torch.rand(i, j)
             v1 = th.Vector(tensor=t1.clone(), name="v1")
-            assert (v1 * torch.tensor(2.1)).allclose(th.Vector(tensor=t1 * 2.1))
-            assert (torch.tensor(1.1) * v1).allclose(th.Vector(tensor=t1 * 1.1))
+            torch.testing.assert_close(
+                (v1 * torch.tensor(2.1)).tensor,
+                th.Vector(tensor=t1 * 2.1).tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                (torch.tensor(1.1) * v1).tensor,
+                th.Vector(tensor=t1 * 1.1).tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
 
 def test_div():
@@ -71,7 +111,12 @@ def test_div():
         for j in range(1, 5):
             t1 = torch.rand(i, j)
             v1 = th.Vector(tensor=t1.clone(), name="v1")
-            assert (v1 / torch.tensor(2.1)).allclose(th.Vector(tensor=t1 / 2.1))
+            torch.testing.assert_close(
+                (v1 / torch.tensor(2.1)).tensor,
+                th.Vector(tensor=t1 / 2.1).tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
 
 def test_matmul():
@@ -82,12 +127,22 @@ def test_matmul():
                 t1 = torch.rand(i, j)
                 v1 = th.Vector(tensor=t1.clone(), name="v1")
                 v1t = v1 @ t
-                assert v1t.allclose((t1.unsqueeze(1) @ t).squeeze(1))
+                torch.testing.assert_close(
+                    v1t,
+                    (t1.unsqueeze(1) @ t).squeeze(1),
+                    rtol=1e-05,
+                    atol=1e-08,
+                )
                 assert v1t.shape == (i, k)
                 t2 = torch.rand(i, k)
                 v2 = th.Vector(tensor=t2.clone(), name="v2")
                 tv2 = t @ v2
-                assert tv2.allclose((t @ t2.unsqueeze(2)).squeeze(2))
+                torch.testing.assert_close(
+                    tv2,
+                    (t @ t2.unsqueeze(2)).squeeze(2),
+                    rtol=1e-05,
+                    atol=1e-08,
+                )
                 assert tv2.shape == (i, j)
 
 
@@ -98,8 +153,18 @@ def test_dot():
             v1 = th.Vector(tensor=t1.clone(), name="v1")
             t2 = torch.rand(i, j)
             v2 = th.Vector(tensor=t2.clone(), name="v2")
-            assert torch.allclose(v1.dot(v2), torch.mul(t1, t2).sum(-1))
-            assert torch.allclose(v1.inner(v2), torch.mul(t1, t2).sum(-1))
+            torch.testing.assert_close(
+                v1.dot(v2),
+                torch.mul(t1, t2).sum(-1),
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                v1.inner(v2),
+                torch.mul(t1, t2).sum(-1),
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
 
 def test_outer():
@@ -109,8 +174,11 @@ def test_outer():
             v1 = th.Vector(tensor=t1.clone(), name="v1")
             t2 = torch.rand(i, j)
             v2 = th.Vector(tensor=t2.clone(), name="v2")
-            assert torch.allclose(
-                v1.outer(v2), torch.matmul(t1.unsqueeze(2), t2.unsqueeze(1))
+            torch.testing.assert_close(
+                v1.outer(v2),
+                torch.matmul(t1.unsqueeze(2), t2.unsqueeze(1)),
+                rtol=1e-05,
+                atol=1e-08,
             )
 
 
@@ -119,7 +187,12 @@ def test_abs():
         for j in range(1, 5):
             t1 = torch.rand(i, j)
             v1 = th.Vector(tensor=t1.clone(), name="v1")
-            assert v1.abs().allclose(th.Vector(tensor=t1.abs()))
+            torch.testing.assert_close(
+                v1.abs().tensor,
+                th.Vector(tensor=t1.abs()).tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
 
 def test_norm():
@@ -140,9 +213,17 @@ def test_cat():
             v2 = th.Vector(tensor=t2.clone(), name="v2")
             t3 = torch.rand(i, j)
             v3 = th.Vector(tensor=t3.clone(), name="v3")
-            assert v1.cat(v2).allclose(th.Vector(tensor=torch.cat((t1, t2), 1)))
-            assert v1.cat((v2, v3)).allclose(
-                th.Vector(tensor=torch.cat((t1, t2, t3), 1))
+            torch.testing.assert_close(
+                v1.cat(v2).tensor,
+                th.Vector(tensor=torch.cat((t1, t2), 1)).tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                v1.cat((v2, v3)).tensor,
+                th.Vector(tensor=torch.cat((t1, t2, t3), 1)).tensor,
+                rtol=1e-05,
+                atol=1e-08,
             )
 
 
@@ -153,9 +234,24 @@ def test_local():
             v1 = th.Vector(tensor=t1.clone(), name="v1")
             t2 = torch.rand(i, j)
             v2 = th.Vector(tensor=t2.clone(), name="v2")
-            assert torch.allclose(v1._local_impl(v2), t2 - t1)
-            assert torch.allclose(v1.local(v2), t2 - t1)
-            assert torch.allclose(th.local(v1, v2), t2 - t1)
+            torch.testing.assert_close(
+                v1._local_impl(v2),
+                t2 - t1,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                v1.local(v2),
+                t2 - t1,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                th.local(v1, v2),
+                t2 - t1,
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
 
 def test_retract():
@@ -164,9 +260,24 @@ def test_retract():
             t1 = torch.rand(i, j)
             v1 = th.Vector(tensor=t1.clone(), name="v1")
             d = torch.rand(i, j)
-            assert v1._retract_impl(d).allclose(th.Vector(tensor=t1 + d))
-            assert v1.retract(d).allclose(th.Vector(tensor=t1 + d))
-            assert th.retract(v1, d).allclose(th.Vector(tensor=t1 + d))
+            torch.testing.assert_close(
+                v1._retract_impl(d).tensor,
+                th.Vector(tensor=t1 + d).tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                v1.retract(d).tensor,
+                th.Vector(tensor=t1 + d).tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                th.retract(v1, d).tensor,
+                th.Vector(tensor=t1 + d).tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
 
 def test_update():
@@ -177,7 +288,12 @@ def test_update():
             batch_size = rng.integers(low=1, high=100)
             data = torch.rand(batch_size, dof)
             v.update(data)
-            assert torch.allclose(data, v.tensor)
+            torch.testing.assert_close(
+                data,
+                v.tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
 
 def test_copy():
@@ -188,40 +304,41 @@ def test_copy():
             check_copy_var(v)
 
 
-def test_exp_map():
-    rng = torch.Generator()
-    rng.manual_seed(0)
-
+def test_exp_map(rng):
     for batch_size in BATCH_SIZES_TO_TEST:
         dim = torch.randint(1, 10, size=[1], generator=rng)[0]
         tangent_vector = torch.rand(batch_size, dim, generator=rng).double() - 0.5
         ret = th.Vector.exp_map(tangent_vector)
 
-        assert torch.allclose(ret.tensor, tangent_vector, atol=EPS)
+        torch.testing.assert_close(
+            ret.tensor,
+            tangent_vector,
+            atol=EPS,
+            rtol=1e-05,
+        )
         check_projection_for_exp_map(
             tangent_vector, Group=th.Vector, is_projected=False
         )
 
 
-def test_log_map():
-    rng = torch.Generator()
-    rng.manual_seed(0)
-
+def test_log_map(rng):
     for batch_size in BATCH_SIZES_TO_TEST:
         dim = torch.randint(1, 10, size=[1], generator=rng)[0]
         group = th.Vector.rand(batch_size, dim, generator=rng)
         ret = group.log_map()
 
-        assert torch.allclose(ret, group.tensor, atol=EPS)
+        torch.testing.assert_close(
+            ret,
+            group.tensor,
+            atol=EPS,
+            rtol=1e-05,
+        )
         check_projection_for_log_map(
             tangent_vector=ret, Group=th.Vector, is_projected=False
         )
 
 
-def test_local_map():
-    rng = torch.Generator()
-    rng.manual_seed(0)
-
+def test_local_map(rng):
     for batch_size in BATCH_SIZES_TO_TEST:
         dim = torch.randint(1, 10, size=[1], generator=rng)[0]
         group0 = th.Vector.rand(batch_size, dim, generator=rng)

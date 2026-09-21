@@ -10,9 +10,7 @@ from torchlie.functional import SE3, SO3, enable_checks
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_global_options(dtype):
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_global_options(dtype, rng):
     g = SE3.rand(1, generator=rng, dtype=getattr(torch, dtype))
     r1 = SE3.log(g)
     set_global_params({f"so3_near_zero_eps_{dtype}": 100.0})

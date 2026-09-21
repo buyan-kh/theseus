@@ -34,9 +34,18 @@ def evaluate_numerical_jacobian_between(Group, tol):
         expected_jacs = numeric_jacobian(new_error_fn, [v0, v1])
         jacobians, error_jac = cost_function.jacobians()
         error = cost_function.error()
-        assert torch.allclose(error_jac, error)
-        assert torch.allclose(jacobians[0], expected_jacs[0], atol=tol)
-        assert torch.allclose(jacobians[1], expected_jacs[1], atol=tol)
+        torch.testing.assert_close(
+            error_jac,
+            error,
+            rtol=1e-05,
+            atol=1e-08,
+        )
+        torch.testing.assert_close(
+            jacobians,
+            expected_jacs,
+            atol=tol,
+            rtol=1e-05,
+        )
 
 
 def test_copy_between():
@@ -66,9 +75,7 @@ def test_jacobian_between():
     evaluate_numerical_jacobian_between(th.SE3, 1e-6)
 
 
-def test_error_between_point2():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_error_between_point2(rng):
     cost_weight = th.ScaleCostWeight(1)
     for batch_size in BATCH_SIZES_TO_TEST:
         p1 = th.Point2(torch.randn(batch_size, 2, generator=rng))
@@ -77,7 +84,12 @@ def test_error_between_point2():
         cost_function = th.Between(p1, p2, measurement, cost_weight)
         expected_error = (p2 - p1) - measurement
         error = cost_function.error()
-        assert torch.allclose(expected_error.tensor, error)
+        torch.testing.assert_close(
+            expected_error.tensor,
+            error,
+            rtol=1e-05,
+            atol=1e-08,
+        )
 
 
 def test_error_between_so2():
@@ -153,5 +165,9 @@ def test_jacobian_between_se3():
             se3_2.project(jac_raw[1][aux_id, :, aux_id], is_sparse=True),
         ]
 
-        assert torch.allclose(actual[0], expected[0])
-        assert torch.allclose(actual[1], expected[1])
+        torch.testing.assert_close(
+            actual,
+            expected,
+            rtol=1e-05,
+            atol=1e-08,
+        )

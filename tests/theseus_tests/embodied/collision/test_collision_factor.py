@@ -79,9 +79,7 @@ def test_collision2d_copy():
 
 
 @pytest.mark.parametrize("pose_cls", [th.Point2, th.SE2])
-def test_collision2d_jacobians(pose_cls):
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_collision2d_jacobians(pose_cls, rng):
     for _ in range(10):
         for batch_size in BATCH_SIZES_TO_TEST:
             cost_weight = th.ScaleCostWeight(torch.ones(1).squeeze().double())
@@ -110,5 +108,15 @@ def test_collision2d_jacobians(pose_cls):
             )
             jacobians, error_jac = cost_function.jacobians()
             error = cost_function.error()
-            assert torch.allclose(error_jac, error)
-            assert torch.allclose(jacobians[0], expected_jacs[0], atol=1e-5)
+            torch.testing.assert_close(
+                error_jac,
+                error,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                jacobians[0],
+                expected_jacs[0],
+                atol=1e-5,
+                rtol=1e-05,
+            )

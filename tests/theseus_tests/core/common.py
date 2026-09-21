@@ -212,7 +212,12 @@ def check_copy_var(var: th.Variable):
     new_var = var.copy(new_name="new")
     assert var is not new_var
     assert var.tensor is not new_var.tensor
-    assert torch.allclose(var.tensor, new_var.tensor)
+    torch.testing.assert_close(
+        var.tensor,
+        new_var.tensor,
+        rtol=1e-05,
+        atol=1e-08,
+    )
     assert new_var.name == "new"
     new_var_no_name = copy.deepcopy(var)
     assert new_var_no_name.name == f"{var.name}_copy"
@@ -226,7 +231,12 @@ def check_another_theseus_tensor_is_copy(var, other_var):
 
 def check_another_torch_tensor_is_copy(tensor, other_tensor):
     assert tensor is not other_tensor
-    assert torch.allclose(tensor, other_tensor)
+    torch.testing.assert_close(
+        tensor,
+        other_tensor,
+        rtol=1e-05,
+        atol=1e-08,
+    )
 
 
 def check_another_theseus_function_is_copy(fn, other_fn, new_name):

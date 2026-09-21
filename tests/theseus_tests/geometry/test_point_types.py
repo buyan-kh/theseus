@@ -22,17 +22,42 @@ def test_xy_point2():
     for _ in range(100):
         for batch_size in BATCH_SIZES_TO_TEST:
             point = th.Point2(tensor=torch.randn(batch_size, 2))
-            assert point.x().allclose(point.tensor[:, 0])
-            assert point.y().allclose(point.tensor[:, 1])
+            torch.testing.assert_close(
+                point.x(),
+                point.tensor[:, 0],
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                point.y(),
+                point.tensor[:, 1],
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
 
 def test_xyz_point3():
     for _ in range(100):
         for batch_size in BATCH_SIZES_TO_TEST:
             point = th.Point3(tensor=torch.randn(batch_size, 3))
-            assert point.x().allclose(point.tensor[:, 0])
-            assert point.y().allclose(point.tensor[:, 1])
-            assert point.z().allclose(point.tensor[:, 2])
+            torch.testing.assert_close(
+                point.x(),
+                point.tensor[:, 0],
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                point.y(),
+                point.tensor[:, 1],
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                point.z(),
+                point.tensor[:, 2],
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
 
 def test_point_operations_return_correct_type():
@@ -52,10 +77,20 @@ def test_point_operations_return_correct_type():
         # for these, test result also since this method was overridden
         p1_copy = p1.copy()
         assert isinstance(p1_copy, point_cls)
-        assert p1_copy.allclose(p1)
+        torch.testing.assert_close(
+            p1_copy.tensor,
+            p1.tensor,
+            rtol=1e-05,
+            atol=1e-08,
+        )
         exp_map = point_cls.exp_map(p2.tensor)
         assert isinstance(exp_map, point_cls)
-        assert exp_map.allclose(p2)
+        torch.testing.assert_close(
+            exp_map.tensor,
+            p2.tensor,
+            rtol=1e-05,
+            atol=1e-08,
+        )
 
 
 def test_operations_mypy_cast():
@@ -80,15 +115,17 @@ def test_operations_mypy_cast():
     assert result[2] == 0
 
 
-def test_exp_map():
-    rng = torch.Generator()
-    rng.manual_seed(0)
-
+def test_exp_map(rng):
     for batch_size in BATCH_SIZES_TO_TEST:
         tangent_vector = torch.rand(batch_size, 2, generator=rng).double() - 0.5
         ret = th.Point2.exp_map(tangent_vector)
 
-        assert torch.allclose(ret.tensor, tangent_vector, atol=EPS)
+        torch.testing.assert_close(
+            ret.tensor,
+            tangent_vector,
+            atol=EPS,
+            rtol=1e-05,
+        )
         check_projection_for_exp_map(
             tangent_vector, Group=th.Point2, is_projected=False
         )
@@ -97,21 +134,28 @@ def test_exp_map():
         tangent_vector = torch.rand(batch_size, 3, generator=rng).double() - 0.5
         ret = th.Point3.exp_map(tangent_vector)
 
-        assert torch.allclose(ret.tensor, tangent_vector, atol=EPS)
+        torch.testing.assert_close(
+            ret.tensor,
+            tangent_vector,
+            atol=EPS,
+            rtol=1e-05,
+        )
         check_projection_for_exp_map(
             tangent_vector, Group=th.Point3, is_projected=False
         )
 
 
-def test_log_map():
-    rng = torch.Generator()
-    rng.manual_seed(0)
-
+def test_log_map(rng):
     for batch_size in BATCH_SIZES_TO_TEST:
         group = th.Point2.rand(batch_size)
         ret = group.log_map()
 
-        assert torch.allclose(ret, group.tensor, atol=EPS)
+        torch.testing.assert_close(
+            ret,
+            group.tensor,
+            atol=EPS,
+            rtol=1e-05,
+        )
         check_projection_for_log_map(
             tangent_vector=ret, Group=th.Point2, is_projected=False
         )
@@ -120,16 +164,18 @@ def test_log_map():
         group = th.Point3.rand(batch_size)
         ret = group.log_map()
 
-        assert torch.allclose(ret, group.tensor, atol=EPS)
+        torch.testing.assert_close(
+            ret,
+            group.tensor,
+            atol=EPS,
+            rtol=1e-05,
+        )
         check_projection_for_log_map(
             tangent_vector=ret, Group=th.Point3, is_projected=False
         )
 
 
-def test_local_map():
-    rng = torch.Generator()
-    rng.manual_seed(0)
-
+def test_local_map(rng):
     for batch_size in BATCH_SIZES_TO_TEST:
         group0 = th.Point2.rand(batch_size)
         group1 = th.Point2.rand(batch_size)

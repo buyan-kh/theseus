@@ -80,9 +80,24 @@ class MockVarNoArgs(th.Manifold):
 
 def test_variable_no_args_init():
     var = MockVarNoArgs(name="mock")
-    assert var.tensor.allclose(torch.ones(1, 1))
+    torch.testing.assert_close(
+        var.tensor,
+        torch.ones(1, 1),
+        rtol=1e-05,
+        atol=1e-08,
+    )
     assert var.name == "mock"
     var = MockVarNoArgs(tensor=torch.ones(2, 1))
-    assert var.tensor.allclose(torch.ones(2, 1))
+    torch.testing.assert_close(
+        var.tensor,
+        torch.ones(2, 1),
+        rtol=1e-05,
+        atol=1e-08,
+    )
     var.update(torch.ones(3, 1))
-    assert var.tensor.allclose(torch.ones(3, 1))
+    torch.testing.assert_close(
+        var.tensor,
+        torch.ones(3, 1),
+        rtol=1e-05,
+        atol=1e-08,
+    )

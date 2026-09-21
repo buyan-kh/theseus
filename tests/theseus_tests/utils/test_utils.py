@@ -79,9 +79,9 @@ def test_build_mlp():
 
 
 def test_gather_from_rows_cols():
-    rng = np.random.default_rng(0)
     generator = torch.Generator()
     generator.manual_seed(0)
+    rng = np.random.default_rng(0)
     for _ in range(100):
         batch_size = rng.integers(1, 8)
         num_rows = rng.integers(1, 20)
@@ -94,7 +94,12 @@ def test_gather_from_rows_cols():
         assert res.shape == (batch_size, num_points)
         for i in range(batch_size):
             for j in range(num_points):
-                assert torch.allclose(res[i, j], matrix[i, rows[i, j], cols[i, j]])
+                torch.testing.assert_close(
+                    res[i, j],
+                    matrix[i, rows[i, j], cols[i, j]],
+                    rtol=1e-05,
+                    atol=1e-08,
+                )
 
 
 def _check_sparse_mv_and_mtv(batch_size, num_rows, num_cols, fill, device):

@@ -13,9 +13,7 @@ from theseus.utils import numeric_jacobian
 from .utils import random_sdf
 
 
-def test_sdf_2d_shapes():
-    generator = torch.Generator()
-    generator.manual_seed(0)
+def test_sdf_2d_shapes(rng):
     for batch_size in BATCH_SIZES_TO_TEST:
         for field_width in BATCH_SIZES_TO_TEST:
             for field_height in BATCH_SIZES_TO_TEST:
@@ -41,11 +39,26 @@ def test_signed_distance_2d():
 
     points = torch.tensor([[0, 0], [0.18, -0.17]])
     rows, cols, _ = sdf.convert_points_to_cell(points)
-    assert torch.allclose(rows, torch.tensor([[2.0, 0.3]]))
-    assert torch.allclose(cols, torch.tensor([[2.0, 3.8]]))
+    torch.testing.assert_close(
+        rows,
+        torch.tensor([[2.0, 0.3]]),
+        rtol=1e-05,
+        atol=1e-08,
+    )
+    torch.testing.assert_close(
+        cols,
+        torch.tensor([[2.0, 3.8]]),
+        rtol=1e-05,
+        atol=1e-08,
+    )
 
     dist, _ = sdf.signed_distance(points)
-    assert torch.allclose(dist, torch.tensor([1.0, 1.567372]).view(1, 2))
+    torch.testing.assert_close(
+        dist,
+        torch.tensor([1.0, 1.567372]).view(1, 2),
+        rtol=1e-05,
+        atol=1e-08,
+    )
 
 
 def test_sdf_2d_creation():
@@ -78,12 +91,18 @@ def test_sdf_2d_creation():
     )
     if sdf_batch.sdf_data.tensor.dtype == torch.float32:
         sdf_map1_verify = sdf_map1_verify.float()
-    assert torch.allclose(
-        sdf_batch.sdf_data[0], sdf_map1_verify
-    ), "Failed conversion of map with obstacle."
-    assert torch.allclose(
-        sdf_batch.sdf_data[1], torch.tensor(1.0)
-    ), "Failed conversion of map with no obstacle."
+    torch.testing.assert_close(
+        sdf_batch.sdf_data[0],
+        sdf_map1_verify,
+        rtol=1e-05,
+        atol=1e-08,
+    )
+    torch.testing.assert_close(
+        sdf_batch.sdf_data[1],
+        torch.ones_like(sdf_batch.sdf_data[1]),
+        rtol=1e-05,
+        atol=1e-08,
+    )
 
 
 def test_signed_distance_2d_jacobian():
@@ -106,9 +125,9 @@ def test_signed_distance_2d_jacobian():
                     new_distance_fn, [x, y], function_dim=1, delta_mag=1e-7
                 )
                 expected_jacobian = torch.cat(expected_jacs, dim=2).squeeze(1)
-                # This makes failures more explicit than torch.allclose()
-                diff = (expected_jacobian - jacobian[:, p_index]).norm(p=float("inf"))
-                assert diff < 1e-5
+                torch.testing.assert_close(
+                    jacobian[:, p_index], expected_jacobian, atol=1e-5, rtol=0
+                )
 
 
 def test_to():

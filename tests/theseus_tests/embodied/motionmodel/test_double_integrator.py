@@ -10,11 +10,11 @@ import pytest  # noqa: F401
 import torch
 
 import theseus as th
-from theseus.core import Variable
 from tests.theseus_tests.core.common import (
     BATCH_SIZES_TO_TEST,
     check_another_theseus_function_is_copy,
 )
+from theseus.core import Variable
 from theseus.utils import numeric_jacobian
 
 
@@ -30,16 +30,38 @@ def test_gp_motion_model_cost_weight_weights():
             b = -6 * (dt.item() ** -2)
             c = 4 * (dt.item() ** -1)
             weights = sqrt_weights.transpose(-2, -1).bmm(sqrt_weights)
-            assert torch.allclose(weights[:, :dof, :dof], q_inv * a)
-            assert torch.allclose(weights[:, :dof, dof:], q_inv * b)
-            assert torch.allclose(weights[:, dof:, :dof], q_inv * b)
-            assert torch.allclose(weights[:, dof:, dof:], q_inv * c)
+            torch.testing.assert_close(
+                weights[:, :dof, :dof],
+                q_inv * a,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                weights[:, :dof, dof:],
+                q_inv * b,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                weights[:, dof:, :dof],
+                q_inv * b,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                weights[:, dof:, dof:],
+                q_inv * c,
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
             error = torch.randn(batch_size, 2 * dof).double()
             weighted_error = cost_weight.weight_error(error)
-            assert torch.allclose(
+            torch.testing.assert_close(
                 sqrt_weights @ error.view(batch_size, 2 * dof, 1),
                 weighted_error.view(batch_size, 2 * dof, 1),
+                rtol=1e-05,
+                atol=1e-08,
             )
 
             jacobians = [
@@ -49,8 +71,18 @@ def test_gp_motion_model_cost_weight_weights():
                 jacobians, error
             )
             for i, jac in enumerate(jacobians):
-                assert torch.allclose(weighted_jacs[i], sqrt_weights @ jacobians[i])
-                assert torch.allclose(weighted_err_2, weighted_error)
+                torch.testing.assert_close(
+                    weighted_jacs[i],
+                    sqrt_weights @ jacobians[i],
+                    rtol=1e-05,
+                    atol=1e-08,
+                )
+                torch.testing.assert_close(
+                    weighted_err_2,
+                    weighted_error,
+                    rtol=1e-05,
+                    atol=1e-08,
+                )
 
 
 def test_gp_motion_model_cost_weight_copy():
@@ -76,8 +108,17 @@ def test_gp_motion_model_variable_type():
 
             assert isinstance(cost_weight.Qc_inv, Variable)
             assert isinstance(cost_weight.dt, Variable)
-            assert torch.allclose(cost_weight.Qc_inv.tensor, q_inv)
-            assert torch.allclose(cost_weight.dt.tensor, dt)
+            torch.testing.assert_close(
+                cost_weight.Qc_inv.tensor,
+                q_inv,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                *torch.broadcast_tensors(cost_weight.dt.tensor, dt),
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
             q_inv_v = Variable(q_inv)
             dt_v = Variable(dt)
@@ -112,11 +153,18 @@ def test_gp_motion_model_cost_function_error_vector_vars():
             )
 
             error = cost_function.error()
-            assert torch.allclose(
+            torch.testing.assert_close(
                 error[:, :dof],
                 vars[2].tensor - (vars[0].tensor + vars[1].tensor * dt.tensor),
+                rtol=1e-05,
+                atol=1e-08,
             )
-            assert torch.allclose(error[:, dof:], vars[3].tensor - vars[1].tensor)
+            torch.testing.assert_close(
+                error[:, dof:],
+                vars[3].tensor - vars[1].tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
             def new_error_fn(new_vars):
                 new_cost_function = th.eb.GPMotionModel(
@@ -127,6 +175,15 @@ def test_gp_motion_model_cost_function_error_vector_vars():
             expected_jacs = numeric_jacobian(new_error_fn, vars, function_dim=2 * dof)
             jacobians, error_jac = cost_function.jacobians()
             error = cost_function.error()
-            assert torch.allclose(error_jac, error)
-            for i in range(4):
-                assert torch.allclose(jacobians[i], expected_jacs[i], atol=1e-8)
+            torch.testing.assert_close(
+                error_jac,
+                error,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                jacobians,
+                expected_jacs,
+                atol=1e-8,
+                rtol=1e-05,
+            )

@@ -3,10 +3,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import pytest
+import torch
 
 import theseus as th
-
-import torch
 from tests.theseus_tests.core.common import BATCH_SIZES_TO_TEST
 
 
@@ -73,14 +72,12 @@ def _loss_linearize(robust_cf, loss_cls, x: torch.Tensor) -> torch.Tensor:
 @pytest.mark.parametrize(
     "loss_cls", [th.WelschLoss, th.HingeLoss, th.HuberLoss, th.GemanMcClureLoss]
 )
-def test_robust_cost_weighted_error(batch_size, loss_cls):
-    generator = torch.Generator()
-    generator.manual_seed(0)
+def test_robust_cost_weighted_error(batch_size, loss_cls, rng):
     for _ in range(10):
         robust_cf = _new_robust_cf(
             batch_size,
             loss_cls,
-            generator,
+            rng,
             gnc_cost=issubclass(loss_cls, th.GemanMcClureLoss),
         )
         cf = robust_cf.cost_function
@@ -101,14 +98,12 @@ def test_robust_cost_weighted_error(batch_size, loss_cls):
 @pytest.mark.parametrize(
     "loss_cls", [th.WelschLoss, th.HingeLoss, th.HuberLoss, th.GemanMcClureLoss]
 )
-def test_robust_cost_grad_form(batch_size, loss_cls):
-    generator = torch.Generator()
-    generator.manual_seed(0)
+def test_robust_cost_grad_form(batch_size, loss_cls, rng):
     for _ in range(10):
         robust_cf = _new_robust_cf(
             batch_size,
             loss_cls,
-            generator,
+            rng,
             gnc_cost=issubclass(loss_cls, th.GemanMcClureLoss),
         )
         cf = robust_cf.cost_function
@@ -129,15 +124,12 @@ def test_robust_cost_grad_form(batch_size, loss_cls):
 @pytest.mark.parametrize(
     "loss_cls", [th.WelschLoss, th.HingeLoss, th.HuberLoss, th.GemanMcClureLoss]
 )
-def test_robust_cost_jacobians(batch_size, loss_cls):
-    generator = torch.Generator()
-    generator.manual_seed(0)
-
+def test_robust_cost_jacobians(batch_size, loss_cls, rng):
     for _ in range(10):
         robust_cf = _new_robust_cf(
             batch_size,
             loss_cls,
-            generator,
+            rng,
             gnc_cost=issubclass(loss_cls, th.GemanMcClureLoss),
         )
         v1, v2 = robust_cf.cost_function.var, robust_cf.cost_function.target
@@ -184,9 +176,7 @@ def test_robust_cost_jacobians(batch_size, loss_cls):
 @pytest.mark.parametrize(
     "loss_cls", [th.WelschLoss, th.HingeLoss, th.HuberLoss, th.GemanMcClureLoss]
 )
-def test_masked_jacobians_called(monkeypatch, loss_cls):
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_masked_jacobians_called(monkeypatch, loss_cls, rng):
     robust_cf = _new_robust_cf(
         128,
         loss_cls,
@@ -212,10 +202,8 @@ def test_masked_jacobians_called(monkeypatch, loss_cls):
 @pytest.mark.parametrize(
     "loss_cls", [th.WelschLoss, th.HingeLoss, th.HuberLoss, th.GemanMcClureLoss]
 )
-def test_mask_jacobians(loss_cls):
+def test_mask_jacobians(loss_cls, rng):
     batch_size = 512
-    rng = torch.Generator()
-    rng.manual_seed(0)
     robust_cf = _new_robust_cf(
         batch_size,
         loss_cls,
@@ -227,8 +215,12 @@ def test_mask_jacobians(loss_cls):
     robust_cf._supports_masking = True
     jac, err = robust_cf.weighted_jacobians_error()
     torch.testing.assert_close(err, err_expected)
-    for j1, j2 in zip(jac, jac_expected):
-        torch.testing.assert_close(j1, j2)
+    torch.testing.assert_close(
+        jac,
+        jac_expected,
+        rtol=1e-05,
+        atol=1e-08,
+    )
 
 
 def _data_model(a, b, x):

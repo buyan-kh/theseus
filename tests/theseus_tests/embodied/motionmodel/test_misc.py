@@ -3,15 +3,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import theseus as th
 import torch
 
+import theseus as th
 from theseus.utils import check_jacobians
 
 
-def test_nonholonomic():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_nonholonomic(rng):
     # Check SE2 pose version
     pose = th.SE2.rand(10, generator=rng)
     vel = th.Vector.rand(10, 3, generator=rng)
@@ -24,9 +22,7 @@ def test_nonholonomic():
     check_jacobians(cf, num_checks=100, tol=1e-5)
 
 
-def test_hinge_cost():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_hinge_cost(rng):
     batch_size = 10
     how_many = 4
 

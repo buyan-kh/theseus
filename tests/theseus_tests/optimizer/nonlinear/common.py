@@ -96,11 +96,26 @@ class ResidualCostFunction(th.CostFunction):
 
 def _check_info(info, batch_size, max_iterations, initial_error, objective):
     assert info.err_history.shape == (batch_size, max_iterations + 1)
-    assert info.err_history[:, 0].allclose(initial_error)
-    assert info.err_history.argmin(dim=1).allclose(info.best_iter + 1)
+    torch.testing.assert_close(
+        info.err_history[:, 0],
+        initial_error,
+        rtol=1e-05,
+        atol=1e-08,
+    )
+    torch.testing.assert_close(
+        info.err_history.argmin(dim=1),
+        info.best_iter + 1,
+        rtol=1e-05,
+        atol=1e-08,
+    )
     last_error = objective.error_metric()
     last_convergence_idx = info.converged_iter.max().item()
-    assert info.err_history[:, last_convergence_idx].allclose(last_error)
+    torch.testing.assert_close(
+        info.err_history[:, last_convergence_idx],
+        last_error,
+        rtol=1e-05,
+        atol=1e-08,
+    )
 
 
 # This test uses least-squares regression to find the coefficients b_j of
@@ -163,7 +178,12 @@ def _check_nonlinear_least_squares_fit(
         **optimize_kwargs,
     )
     # Solution must now match the true coefficients
-    assert variables[0].tensor.allclose(true_coeffs.repeat(batch_size, 1), atol=1e-6)
+    torch.testing.assert_close(
+        variables[0].tensor,
+        true_coeffs.repeat(batch_size, 1),
+        atol=1e-6,
+        rtol=1e-05,
+    )
     _check_info(info, batch_size, max_iterations, initial_error, objective)
 
 
@@ -207,7 +227,12 @@ def _check_nonlinear_least_squares_fit_multivar(
 
     # Solution must now match the true coefficients
     for i in range(nvars):
-        assert variables[i].tensor.allclose(true_coeffs[i].repeat(batch_size, 1))
+        torch.testing.assert_close(
+            variables[i].tensor,
+            true_coeffs[i].repeat(batch_size, 1),
+            rtol=1e-05,
+            atol=1e-08,
+        )
 
     _check_info(info, batch_size, max_iterations, initial_error, objective)
 

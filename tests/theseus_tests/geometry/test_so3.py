@@ -33,14 +33,22 @@ def check_SO3_log_map(tangent_vector, atol=1e-7, enable_functorch=False):
     with set_lie_group_check_enabled(not enable_functorch, silent=True):
         error = (tangent_vector - th.SO3.exp_map(tangent_vector).log_map()).norm(dim=1)
         error = torch.minimum(error, (error - 2 * np.pi).abs())
-        assert torch.allclose(error, torch.zeros_like(error), atol=atol)
+        torch.testing.assert_close(
+            error,
+            torch.zeros_like(error),
+            atol=atol,
+            rtol=1e-05,
+        )
 
 
 def check_SO3_to_quaternion(so3: th.SO3, atol=1e-10, enable_functorch=False):
     with set_lie_group_check_enabled(not enable_functorch, silent=True):
         quaternions = so3.to_quaternion()
-        assert torch.allclose(
-            th.SO3(quaternion=quaternions).to_matrix(), so3.to_matrix(), atol=atol
+        torch.testing.assert_close(
+            th.SO3(quaternion=quaternions).to_matrix(),
+            so3.to_matrix(),
+            atol=atol,
+            rtol=1e-05,
         )
 
 
@@ -57,9 +65,7 @@ def _create_tangent_vector(batch_size, ang_factor, rng, dtype):
     "ang_factor", [None, 1e-5, 3e-3, 2 * np.pi - 1e-11, np.pi - 1e-7, np.pi - 1e-11]
 )
 @pytest.mark.parametrize("enable_functorch", [True, False])
-def test_exp_map(batch_size, dtype, ang_factor, enable_functorch):
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_exp_map(batch_size, dtype, ang_factor, enable_functorch, rng):
     ATOL = 2e-4 if dtype == torch.float32 else 1e-6
 
     if ang_factor is None:
@@ -80,12 +86,10 @@ def test_exp_map(batch_size, dtype, ang_factor, enable_functorch):
     "ang_factor", [None, 1e-5, 3e-3, 2 * np.pi - 1e-11, np.pi - 1e-11]
 )
 @pytest.mark.parametrize("enable_functorch", [True, False])
-def test_log_map(batch_size, dtype, ang_factor, enable_functorch):
+def test_log_map(batch_size, dtype, ang_factor, enable_functorch, rng):
     if dtype == torch.float32 and ang_factor == np.pi - 1e-11:
         return
 
-    rng = torch.Generator()
-    rng.manual_seed(0)
     ATOL = 1e-3 if dtype == torch.float32 else 1e-8
     PROJECTION_ATOL = 1e-2 if dtype == torch.float32 else 1e-8
 
@@ -108,10 +112,7 @@ def test_log_map(batch_size, dtype, ang_factor, enable_functorch):
 @pytest.mark.parametrize("batch_size", BATCH_SIZES_TO_TEST)
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
 @pytest.mark.parametrize("enable_functorch", [True, False])
-def test_inverse(batch_size, dtype, enable_functorch):
-    rng = torch.Generator()
-    rng.manual_seed(0)
-
+def test_inverse(batch_size, dtype, enable_functorch, rng):
     group = th.SO3.rand(batch_size, generator=rng, dtype=dtype)
 
     check_inverse(group, enable_functorch=enable_functorch)
@@ -123,9 +124,7 @@ def test_inverse(batch_size, dtype, enable_functorch):
     "ang_factor", [None, 1e-5, 3e-3, 2 * np.pi - 1e-11, np.pi - 1e-11]
 )
 @pytest.mark.parametrize("enable_functorch", [True, False])
-def test_quaternion(batch_size, dtype, ang_factor, enable_functorch):
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_quaternion(batch_size, dtype, ang_factor, enable_functorch, rng):
     ATOL = 1e-3 if dtype == torch.float32 else 1e-8
 
     if ang_factor is None:
@@ -141,9 +140,7 @@ def test_quaternion(batch_size, dtype, ang_factor, enable_functorch):
 @pytest.mark.parametrize("batch_size", BATCH_SIZES_TO_TEST)
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
 @pytest.mark.parametrize("enable_functorch", [True, False])
-def test_adjoint(batch_size, dtype, enable_functorch):
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_adjoint(batch_size, dtype, enable_functorch, rng):
     so3 = th.SO3.rand(batch_size, generator=rng, dtype=dtype)
     tangent = torch.randn(batch_size, 3, dtype=dtype)
     check_adjoint(so3, tangent, enable_functorch)
@@ -151,18 +148,14 @@ def test_adjoint(batch_size, dtype, enable_functorch):
 
 @pytest.mark.parametrize("batch_size", BATCH_SIZES_TO_TEST)
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
-def test_compose(batch_size, dtype):
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_compose(batch_size, dtype, rng):
     so3_1 = th.SO3.rand(batch_size, generator=rng, dtype=dtype)
     so3_2 = th.SO3.rand(batch_size, generator=rng, dtype=dtype)
     check_compose(so3_1, so3_2)
 
 
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
-def test_rotate_and_unrotate(dtype):
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_rotate_and_unrotate(dtype, rng):
     for _ in range(10):  # repeat a few times
         for batch_size_group in BATCH_SIZES_TO_TEST:
             for batch_size_pnt in BATCH_SIZES_TO_TEST:
@@ -185,13 +178,17 @@ def test_rotate_and_unrotate(dtype):
                 unrotated_point = so3.unrotate(rotated_point, jacobians_unrotate)
 
                 # Check the operation result
-                assert torch.allclose(
-                    expected_rotated_data.squeeze(2),
-                    rotated_point.tensor,
+                torch.testing.assert_close(
+                    *torch.broadcast_tensors(
+                        expected_rotated_data.squeeze(2), rotated_point.tensor
+                    ),
                     atol=TEST_EPS,
+                    rtol=1e-05,
                 )
-                assert torch.allclose(
-                    point_tensor, unrotated_point.tensor, atol=TEST_EPS
+                torch.testing.assert_close(
+                    *torch.broadcast_tensors(point_tensor, unrotated_point.tensor),
+                    atol=TEST_EPS,
+                    rtol=1e-05,
                 )
 
                 # Check the jacobians
@@ -203,11 +200,11 @@ def test_rotate_and_unrotate(dtype):
                     [so3_double, th.Point3(point_tensor.double())],
                     function_dim=3,
                 )
-                assert torch.allclose(
-                    jacobians_rotate[0].double(), expected_jac[0], atol=TEST_EPS
-                )
-                assert torch.allclose(
-                    jacobians_rotate[1].double(), expected_jac[1], atol=TEST_EPS
+                torch.testing.assert_close(
+                    [jacobians_rotate[0].double(), jacobians_rotate[1].double()],
+                    expected_jac,
+                    atol=TEST_EPS,
+                    rtol=1e-05,
                 )
                 expected_jac = numeric_jacobian(
                     lambda groups: groups[0].unrotate(groups[1]),
@@ -215,19 +212,17 @@ def test_rotate_and_unrotate(dtype):
                     delta_mag=1e-5,
                     function_dim=3,
                 )
-                assert torch.allclose(
-                    jacobians_unrotate[0].double(), expected_jac[0], atol=TEST_EPS
-                )
-                assert torch.allclose(
-                    jacobians_unrotate[1].double(), expected_jac[1], atol=TEST_EPS
+                torch.testing.assert_close(
+                    [jacobians_unrotate[0].double(), jacobians_unrotate[1].double()],
+                    expected_jac,
+                    atol=TEST_EPS,
+                    rtol=1e-05,
                 )
 
 
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
 @pytest.mark.parametrize("enable_functorch", [True, False])
-def test_projection(dtype, enable_functorch):
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_projection(dtype, enable_functorch, rng):
     for _ in range(10):  # repeat a few times
         for batch_size in BATCH_SIZES_TO_TEST:
             # Test SO3.rotate
@@ -252,9 +247,7 @@ def test_projection(dtype, enable_functorch):
 
 
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
-def test_local_map(dtype):
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_local_map(dtype, rng):
     ATOL = 3e-5 if dtype == torch.float32 else 1e-7
 
     for batch_size in BATCH_SIZES_TO_TEST:

@@ -44,9 +44,7 @@ def test_copy_moving_frame_between():
     assert cost_function2.name == "new_name"
 
 
-def test_jacobian_moving_frame_between():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_jacobian_moving_frame_between(rng):
     cost_weight = thcore.ScaleCostWeight(1)
     for batch_size in BATCH_SIZES_TO_TEST:
         f1 = create_random_se2(batch_size, rng)
@@ -67,9 +65,18 @@ def test_jacobian_moving_frame_between():
         expected_jacs = numeric_jacobian(new_error_fn, [f1, f2, p1, p2])
         jacobians, error_jac = cost_function.jacobians()
         error = cost_function.error()
-        assert torch.allclose(error_jac, error)
-        for i in range(4):
-            assert torch.allclose(jacobians[i], expected_jacs[i], atol=1e-8)
+        torch.testing.assert_close(
+            error_jac,
+            error,
+            rtol=1e-05,
+            atol=1e-08,
+        )
+        torch.testing.assert_close(
+            jacobians,
+            expected_jacs,
+            atol=1e-8,
+            rtol=1e-05,
+        )
 
 
 def test_error_moving_frame_between_se2():

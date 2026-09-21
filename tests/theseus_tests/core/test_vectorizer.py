@@ -60,14 +60,24 @@ def test_costs_vars_and_err_before_vectorization():
             w_err = cf.weighted_error()
             if cf.cost_fn is cf1:
                 assert v1 in optim_vars
-                assert w_err.allclose((v1.tensor - t1.tensor) * w1)
+                torch.testing.assert_close(
+                    w_err,
+                    (v1.tensor - t1.tensor) * w1,
+                    rtol=1e-05,
+                    atol=1e-08,
+                )
                 assert _check_attr(cf, v1)
                 saw_cf1 = True
             elif cf.cost_fn is cf2:
                 assert v2 in optim_vars and odummy in optim_vars
                 assert adummy in aux_vars
                 assert _check_attr(cf, v2) and _check_attr(cf, odummy)
-                assert w_err.allclose((v2.tensor - t1.tensor) * w2)
+                torch.testing.assert_close(
+                    w_err,
+                    (v2.tensor - t1.tensor) * w2,
+                    rtol=1e-05,
+                    atol=1e-08,
+                )
                 saw_cf2 = True
             else:
                 assert False
@@ -207,8 +217,12 @@ def _check_vectorized_wrappers(vectorization, objective):
             if cost_fn is w.cost_fn:
                 w_jac, w_err = cost_fn.weighted_jacobians_error()
                 torch.testing.assert_close(w._cached_error, w_err)
-                for jac, exp_jac in zip(w._cached_jacobians, w_jac):
-                    torch.testing.assert_close(jac, exp_jac, atol=1e-6, rtol=1e-6)
+                torch.testing.assert_close(
+                    w._cached_jacobians,
+                    w_jac,
+                    atol=1e-6,
+                    rtol=1e-6,
+                )
 
 
 def test_vectorized_error():
@@ -316,7 +330,12 @@ def test_vectorized_retract():
         )
 
         for v1, v2 in zip(variables, variables_vectorized):
-            assert v1.tensor.allclose(v2.tensor)
+            torch.testing.assert_close(
+                v1.tensor,
+                v2.tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
 
 # This solves a very simple objective of the form sum (wi * (xi - ti)) **2, where
