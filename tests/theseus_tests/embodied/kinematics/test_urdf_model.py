@@ -66,9 +66,10 @@ def test_forward_kinematics_seq(dataset):
             ee_name
         ]
 
-        assert torch.allclose(
-            ee_se3_target.local(ee_se3_computed),
-            torch.zeros(6, device=device),
+        local = ee_se3_target.local(ee_se3_computed)
+        torch.testing.assert_close(
+            local,
+            torch.zeros_like(local),
             atol=1e-5,
             rtol=1e-4,
         )
@@ -81,7 +82,7 @@ def test_forward_kinematics_batched(dataset):
     ee_se3_target = th.SE3(x_y_z_quaternion=dataset["ee_poses"])
     ee_se3_computed = robot_model.forward_kinematics(dataset["joint_states"])[ee_name]
 
-    assert torch.allclose(
+    torch.testing.assert_close(
         ee_se3_target.local(ee_se3_computed),
         torch.zeros(dataset["num_data"], 6, device=device),
         atol=1e-5,
@@ -128,7 +129,7 @@ def test_jacobian(dataset, autograd_jacobians, batch_size):
     )[ee_name]
     jacobian_analytical = jacobians[ee_name]
 
-    assert torch.allclose(
+    torch.testing.assert_close(
         autograd_jacobians[0:batch_size, ...],
         jacobian_analytical,
         atol=1e-6,

@@ -25,9 +25,7 @@ def _build_sparse_mat(batch_size, rng):
 @pytest.mark.cudaext
 @pytest.mark.parametrize("batch_size", [1, 32])
 @pytest.mark.parametrize("float_damping", [True, False])
-def test_sparse_solver(batch_size: int, float_damping: bool):
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_sparse_solver(batch_size: int, float_damping: bool, rng):
     if not torch.cuda.is_available():
         return
 

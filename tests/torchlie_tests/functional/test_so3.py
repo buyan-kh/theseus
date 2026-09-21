@@ -15,10 +15,10 @@ from .common import (
     BATCH_SIZES_TO_TEST,
     TEST_EPS,
     check_binary_op_broadcasting,
-    check_left_project_broadcasting,
-    check_lie_group_function,
     check_jacrev_binary,
     check_jacrev_unary,
+    check_left_project_broadcasting,
+    check_lie_group_function,
     check_log_map_passt,
     run_test_op,
 )
@@ -54,11 +54,9 @@ def test_op(op_name, batch_size, dtype):
 
 @pytest.mark.parametrize("batch_size", BATCH_SIZES_TO_TEST)
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
-def test_vee(batch_size: Union[int, Sequence[int]], dtype: torch.dtype):
+def test_vee(batch_size: Union[int, Sequence[int]], dtype: torch.dtype, rng):
     if isinstance(batch_size, int):
         batch_size = (batch_size,)
-    rng = torch.Generator()
-    rng.manual_seed(0)
     tangent_vector = torch.rand(*batch_size, 3, dtype=dtype, generator=rng)
     matrix = so3_impl._hat_autograd_fn(tangent_vector)
 
@@ -88,9 +86,7 @@ def test_jacrev_binary(batch_size, name):
 
 
 @pytest.mark.parametrize("name", ["compose", "transform", "untransform"])
-def test_binary_op_broadcasting(name):
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_binary_op_broadcasting(name, rng):
     batch_sizes = [(1,), (2,), (1, 2), (2, 1), (2, 2), (2, 2, 2), tuple()]
     for bs1 in batch_sizes:
         for bs2 in batch_sizes:
@@ -99,9 +95,7 @@ def test_binary_op_broadcasting(name):
             )
 
 
-def test_left_project_broadcasting():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_left_project_broadcasting(rng):
     batch_sizes = [tuple(), (1, 2), (1, 1, 2), (2, 1), (2, 2), (2, 2, 2)]
     check_left_project_broadcasting(SO3, batch_sizes, [0, 1, 2], (3, 3), rng)
 

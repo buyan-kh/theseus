@@ -18,9 +18,7 @@ from tests.theseus_tests.geometry.test_se2 import create_random_se2
 from theseus.utils import numeric_jacobian
 
 
-def test_eff_obj_interesect_jacobians():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_eff_obj_interesect_jacobians(rng):
     for batch_size in BATCH_SIZES_TO_TEST:
         obj = create_random_se2(batch_size, rng)
         eff = create_random_se2(batch_size, rng)
@@ -50,13 +48,7 @@ def test_eff_obj_interesect_jacobians():
             new_error_fn, [obj, eff], function_dim=1, delta_mag=1e-6
         )
 
-        def _check_jacobian(actual_, expected_):
-            # This makes failures more explicit than torch.allclose()
-            diff = (expected_ - actual_).norm(p=float("inf"))
-            assert diff < 1e-5
-
-        for i in range(len(expected_jacs)):
-            _check_jacobian(jacobians[i], expected_jacs[i])
+        torch.testing.assert_close(jacobians, expected_jacs, atol=1e-5, rtol=0)
 
 
 def _load_sdf_data_from_file(filename):
@@ -151,12 +143,15 @@ def test_eff_obj_interesect_errors():
 
         actual = cost_fn.error()
         expected = outputs["error"][sdf_idx, :]
-        assert torch.allclose(actual, expected)
+        torch.testing.assert_close(
+            actual,
+            expected,
+            rtol=1e-05,
+            atol=1e-08,
+        )
 
 
-def test_eff_obj_variable_type():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_eff_obj_variable_type(rng):
     for _ in range(10):
         for batch_size in BATCH_SIZES_TO_TEST:
             obj = create_random_se2(batch_size, rng)

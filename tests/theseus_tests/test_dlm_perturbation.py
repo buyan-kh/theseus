@@ -56,8 +56,18 @@ def test_dlm_perturbation_jacobian():
             )
             jacobians, error_jac = cf.jacobians()
             error = cf.error()
-            assert error.allclose(error_jac)
-            assert jacobians[0].allclose(expected_jacs[0], atol=1e-5)
+            torch.testing.assert_close(
+                error,
+                error_jac,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                jacobians[0],
+                expected_jacs[0],
+                atol=1e-5,
+                rtol=1e-05,
+            )
 
             if group_cls in [th.Vector, th.SO2, th.SE2]:
                 # Original cf didn't work for SO3 or SE3
@@ -74,14 +84,12 @@ def test_dlm_perturbation_jacobian():
                 )
 
 
-def test_backward_pass_se3_runs():
-    generator = torch.Generator()
-    generator.manual_seed(0)
+def test_backward_pass_se3_runs(rng):
     dtype = torch.float64
     batch_size = 10
-    var = th.rand_se3(batch_size, generator=generator)
+    var = th.rand_se3(batch_size, generator=rng)
     var.name = "v1"
-    target = th.rand_se3(batch_size, generator=generator)
+    target = th.rand_se3(batch_size, generator=rng)
     target.name = "target"
 
     objective = th.Objective()

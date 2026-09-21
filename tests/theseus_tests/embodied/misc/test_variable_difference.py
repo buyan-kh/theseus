@@ -31,8 +31,18 @@ def evaluate_numerical_jacobian_local_cost_fn(Group, tol):
         expected_jacs = numeric_jacobian(new_error_fn, [v0])
         jacobians, error_jac = cost_function.jacobians()
         error = cost_function.error()
-        assert torch.allclose(error_jac, error)
-        assert torch.allclose(jacobians[0], expected_jacs[0], atol=tol)
+        torch.testing.assert_close(
+            error_jac,
+            error,
+            rtol=1e-05,
+            atol=1e-08,
+        )
+        torch.testing.assert_close(
+            jacobians[0],
+            expected_jacs[0],
+            atol=tol,
+            rtol=1e-05,
+        )
 
 
 def test_copy_local_cost_fn():
@@ -60,9 +70,7 @@ def test_jacobian_local_cost_fn():
     evaluate_numerical_jacobian_local_cost_fn(th.SE3, 1e-6)
 
 
-def test_error_local_cost_fn_point2():
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_error_local_cost_fn_point2(rng):
     cost_weight = th.ScaleCostWeight(1)
     for batch_size in BATCH_SIZES_TO_TEST:
         p0 = th.Point2(torch.randn(batch_size, 2, generator=rng))
@@ -70,7 +78,12 @@ def test_error_local_cost_fn_point2():
         cost_function = th.Difference(p0, target, cost_weight)
         expected_error = p0 - target
         error = cost_function.error()
-        assert torch.allclose(expected_error.tensor, error)
+        torch.testing.assert_close(
+            expected_error.tensor,
+            error,
+            rtol=1e-05,
+            atol=1e-08,
+        )
 
 
 def test_error_local_cost_fn_so2():

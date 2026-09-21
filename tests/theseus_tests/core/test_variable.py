@@ -26,7 +26,12 @@ def test_variable_init():
             assert name == t.name
         else:
             assert t.name == f"Variable__{t._id}"
-        assert t.tensor.allclose(data)
+        torch.testing.assert_close(
+            t.tensor,
+            data,
+            rtol=1e-05,
+            atol=1e-08,
+        )
 
     assert len(set(all_ids)) == len(all_ids)
 
@@ -76,8 +81,18 @@ def test_update():
             var.update(new_data_some_ignored, batch_ignore_mask=ignore_mask)
             for i in range(batch_size):
                 if ignore_mask[i] == 1:
-                    assert torch.allclose(var[i], old_data[i])
+                    torch.testing.assert_close(
+                        var[i],
+                        old_data[i],
+                        rtol=1e-05,
+                        atol=1e-08,
+                    )
                 else:
                     if isinstance(new_data_some_ignored, th.Variable):
                         new_data_some_ignored = new_data_some_ignored.tensor
-                    assert torch.allclose(var[i], new_data_some_ignored[i])
+                    torch.testing.assert_close(
+                        var[i],
+                        new_data_some_ignored[i],
+                        rtol=1e-05,
+                        atol=1e-08,
+                    )

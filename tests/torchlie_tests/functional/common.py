@@ -8,7 +8,6 @@ import torch
 
 from torchlie.global_params import set_global_params
 
-
 BATCH_SIZES_TO_TEST = [1, 20, (1, 2), (3, 4, 5), tuple()]
 TEST_EPS = 5e-7
 
@@ -141,8 +140,12 @@ def check_lie_group_function(
     jacs = torch.autograd.functional.jacobian(op, inputs, vectorize=True)
 
     if funcs is None:
-        for jac_impl, jac in zip(jacs_impl, jacs):
-            torch.testing.assert_close(jac_impl, jac, atol=atol, rtol=atol)
+        torch.testing.assert_close(
+            jacs_impl,
+            jacs,
+            atol=atol,
+            rtol=atol,
+        )
     else:
         for jac_impl, jac, func in zip(jacs_impl, jacs, funcs):
             if func is None:

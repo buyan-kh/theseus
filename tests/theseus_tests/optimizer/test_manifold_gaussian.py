@@ -92,7 +92,12 @@ def test_copy():
         for j in range(n_vars):
             assert var.mean[j] is not new_var.mean[j]
         assert var.precision is not new_var.precision
-        assert torch.allclose(var.precision, new_var.precision)
+        torch.testing.assert_close(
+            var.precision,
+            new_var.precision,
+            rtol=1e-05,
+            atol=1e-08,
+        )
         assert new_var.name == "new"
         new_var_no_name = copy.deepcopy(var)
         assert new_var_no_name.name == f"{var.name}_copy"
@@ -118,7 +123,12 @@ def test_update():
 
         assert var.precision is new_precision_good
         for j in range(n_vars):
-            assert torch.allclose(var.mean[j].tensor, new_mean_good[j].tensor)
+            torch.testing.assert_close(
+                var.mean[j].tensor,
+                new_mean_good[j].tensor,
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
         # check raises error on shape for precision
         new_precision_bad = torch.eye(dof + 1)[None, ...].repeat(batch_size, 1, 1)
@@ -163,11 +173,21 @@ def test_local_gaussian():
         mean_tp, lam_tp1 = th.local_gaussian(variable, gaussian, return_mean=True)
         eta_tp, lam_tp2 = th.local_gaussian(variable, gaussian, return_mean=False)
 
-        assert torch.allclose(lam_tp1, lam_tp2)
+        torch.testing.assert_close(
+            lam_tp1,
+            lam_tp2,
+            rtol=1e-05,
+            atol=1e-08,
+        )
 
         # check mean and eta are consistent
         mean_tp_calc = torch.matmul(lam_tp1, mean_tp.unsqueeze(-1)).squeeze(-1)
-        assert torch.allclose(eta_tp, mean_tp_calc)
+        torch.testing.assert_close(
+            eta_tp,
+            mean_tp_calc,
+            rtol=1e-05,
+            atol=1e-08,
+        )
 
         # check raises error if gaussian over mulitple Manifold objects
         bad_mean = mean + [variable]
@@ -196,4 +216,9 @@ def test_retract_gaussian():
         lam_tp = torch.eye(variable.dof())[None, ...].repeat(batch_size, 1, 1)
 
         gaussian = th.retract_gaussian(variable, mean_tp, lam_tp)
-        assert torch.allclose(gaussian.mean[0].tensor, variable.retract(mean_tp).tensor)
+        torch.testing.assert_close(
+            gaussian.mean[0].tensor,
+            variable.retract(mean_tp).tensor,
+            rtol=1e-05,
+            atol=1e-08,
+        )

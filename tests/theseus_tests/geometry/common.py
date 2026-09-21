@@ -5,9 +5,9 @@
 
 import torch
 
+from tests.theseus_tests.core.common import BATCH_SIZES_TO_TEST  # noqa: F401
 from theseus.constants import TEST_EPS
 from theseus.core.cost_function import AutoDiffCostFunction, AutogradMode
-from tests.theseus_tests.core.common import BATCH_SIZES_TO_TEST  # noqa: F401
 from theseus.geometry.lie_group_check import set_lie_group_check_enabled
 from theseus.geometry.vector import Vector
 from theseus.utils import numeric_jacobian
@@ -18,10 +18,11 @@ def check_exp_map(tangent_vector, group_cls, atol=TEST_EPS, enable_functorch=Fal
         group = group_cls.exp_map(tangent_vector)
         tangent_vector_double = tangent_vector.double()
         tangent_vector_double.to(dtype=torch.float64)
-        assert torch.allclose(
+        torch.testing.assert_close(
             group_cls.hat(tangent_vector_double).matrix_exp(),
             group.to_matrix().double(),
             atol=atol,
+            rtol=1e-05,
         )
 
     if enable_functorch:
@@ -40,7 +41,12 @@ def check_exp_map(tangent_vector, group_cls, atol=TEST_EPS, enable_functorch=Fal
         )
         jacs_vec, _ = cost_fn_vec.jacobians()
 
-        assert torch.allclose(jacs[0], jacs_vec[0], atol=atol)
+        torch.testing.assert_close(
+            jacs[0],
+            jacs_vec[0],
+            atol=atol,
+            rtol=1e-05,
+        )
 
         def err_fn(optim_vars, aux_vars):
             jacobians = []
@@ -56,13 +62,21 @@ def check_exp_map(tangent_vector, group_cls, atol=TEST_EPS, enable_functorch=Fal
         )
         jacs_vec, _ = cost_fn_vec.jacobians()
 
-        assert torch.allclose(jacs[0], jacs_vec[0], atol=atol)
+        torch.testing.assert_close(
+            jacs[0],
+            jacs_vec[0],
+            atol=atol,
+            rtol=1e-05,
+        )
 
 
 def check_log_map(tangent_vector, group_cls, atol=TEST_EPS, enable_functorch=False):
     with set_lie_group_check_enabled(not enable_functorch, silent=True):
-        assert torch.allclose(
-            tangent_vector, group_cls.exp_map(tangent_vector).log_map(), atol=atol
+        torch.testing.assert_close(
+            tangent_vector,
+            group_cls.exp_map(tangent_vector).log_map(),
+            atol=atol,
+            rtol=1e-05,
         )
 
     if enable_functorch:
@@ -79,7 +93,12 @@ def check_log_map(tangent_vector, group_cls, atol=TEST_EPS, enable_functorch=Fal
         )
         jacs_vec, _ = cost_fn_vec.jacobians()
 
-        assert torch.allclose(jacs[0], jacs_vec[0], atol=atol)
+        torch.testing.assert_close(
+            jacs[0],
+            jacs_vec[0],
+            atol=atol,
+            rtol=1e-05,
+        )
 
         def err_fn(optim_vars, aux_vars):
             jacobians = []
@@ -95,7 +114,12 @@ def check_log_map(tangent_vector, group_cls, atol=TEST_EPS, enable_functorch=Fal
         )
         jacs_vec, _ = cost_fn_vec.jacobians()
 
-        assert torch.allclose(jacs[0], jacs_vec[0], atol=atol)
+        torch.testing.assert_close(
+            jacs[0],
+            jacs_vec[0],
+            atol=atol,
+            rtol=1e-05,
+        )
 
 
 def check_compose(group_1, group_2, enable_functorch=False):
@@ -113,17 +137,33 @@ def check_compose(group_1, group_2, enable_functorch=False):
         )
         batch = group_1.shape[0]
         dof = group_1.dof()
-        assert torch.allclose(composition.to_matrix(), expected_matrix, atol=TEST_EPS)
-        assert torch.allclose(Jcmp[0].double(), expected_jacs[0], atol=TEST_EPS)
-        assert torch.allclose(
+        torch.testing.assert_close(
+            composition.to_matrix(),
+            expected_matrix,
+            atol=TEST_EPS,
+            rtol=1e-05,
+        )
+        torch.testing.assert_close(
+            Jcmp[0].double(),
+            expected_jacs[0],
+            atol=TEST_EPS,
+            rtol=1e-05,
+        )
+        torch.testing.assert_close(
             Jcmp[1].double(),
             torch.eye(dof, dof, dtype=torch.float64)
             .unsqueeze(0)
             .expand(batch, dof, dof),
             atol=TEST_EPS,
+            rtol=1e-05,
         )
         if group_1.dtype == torch.float64:
-            assert torch.allclose(Jcmp[1].double(), expected_jacs[1], atol=TEST_EPS)
+            torch.testing.assert_close(
+                Jcmp[1].double(),
+                expected_jacs[1],
+                atol=TEST_EPS,
+                rtol=1e-05,
+            )
 
     if enable_functorch:
         optim_vars = [group_1, group_2]
@@ -140,8 +180,12 @@ def check_compose(group_1, group_2, enable_functorch=False):
         )
         jacs_vec, _ = cost_fn_vec.jacobians()
 
-        assert torch.allclose(jacs[0], jacs_vec[0], atol=TEST_EPS)
-        assert torch.allclose(jacs[1], jacs_vec[1], atol=TEST_EPS)
+        torch.testing.assert_close(
+            jacs,
+            jacs_vec,
+            atol=TEST_EPS,
+            rtol=1e-05,
+        )
 
         def err_fn(optim_vars, aux_vars):
             jacobians = []
@@ -163,8 +207,12 @@ def check_compose(group_1, group_2, enable_functorch=False):
         )
         jacs_vec, _ = cost_fn_vec.jacobians()
 
-        assert torch.allclose(jacs[0], jacs_vec[0], atol=TEST_EPS)
-        assert torch.allclose(jacs[1], jacs_vec[1], atol=TEST_EPS)
+        torch.testing.assert_close(
+            jacs,
+            jacs_vec,
+            atol=TEST_EPS,
+            rtol=1e-05,
+        )
 
 
 def check_inverse(group, enable_functorch=False):
@@ -178,12 +226,18 @@ def check_inverse(group, enable_functorch=False):
         expected_jac = numeric_jacobian(
             lambda groups: groups[0].inverse(), [group_double]
         )
-        assert torch.allclose(
+        torch.testing.assert_close(
             inverse_group.to_matrix().double(),
             inverse_result.to_matrix().double(),
             atol=TEST_EPS,
+            rtol=1e-05,
         )
-        assert torch.allclose(jac[0].double(), expected_jac[0], atol=TEST_EPS)
+        torch.testing.assert_close(
+            jac[0].double(),
+            expected_jac[0],
+            atol=TEST_EPS,
+            rtol=1e-05,
+        )
 
     if enable_functorch:
         optim_vars = [group]
@@ -200,7 +254,12 @@ def check_inverse(group, enable_functorch=False):
         )
         jacs_vec, _ = cost_fn_vec.jacobians()
 
-        assert torch.allclose(jacs[0], jacs_vec[0], atol=TEST_EPS)
+        torch.testing.assert_close(
+            jacs[0],
+            jacs_vec[0],
+            atol=TEST_EPS,
+            rtol=1e-05,
+        )
 
 
 def check_adjoint(group, tangent_vector, enable_functorch=False):
@@ -212,8 +271,11 @@ def check_adjoint(group, tangent_vector, enable_functorch=False):
             @ group.hat(tangent_vector.double())
             @ group.inverse().to_matrix().double()
         )
-        assert torch.allclose(
-            tangent_left.double().squeeze(2), tangent_right, atol=1e-5
+        torch.testing.assert_close(
+            tangent_left.double().squeeze(2),
+            tangent_right,
+            atol=1e-5,
+            rtol=1e-05,
         )
 
     if enable_functorch:
@@ -232,7 +294,12 @@ def check_adjoint(group, tangent_vector, enable_functorch=False):
         )
         jacs_vec, _ = cost_fn_vec.jacobians()
 
-        assert torch.allclose(jacs[0], jacs_vec[0], atol=TEST_EPS)
+        torch.testing.assert_close(
+            jacs[0],
+            jacs_vec[0],
+            atol=TEST_EPS,
+            rtol=1e-05,
+        )
 
 
 # Func can be SO2.rotate, SE2.transform_to, SO3.unrotate, etc., whose third argument
@@ -261,8 +328,11 @@ def check_projection_for_rotate_and_transform(
 
     # Check returns
     rets = Func(group, point, jac)
-    assert torch.allclose(
-        rets.tensor.double(), func(group.tensor, point.tensor).double()
+    torch.testing.assert_close(
+        rets.tensor.double(),
+        func(group.tensor, point.tensor).double(),
+        rtol=1e-05,
+        atol=1e-08,
     )
 
     # Check dense jacobian matrices
@@ -278,8 +348,12 @@ def check_projection_for_rotate_and_transform(
     expected[0][aux_id, :, aux_id, :] = jac[0].double()
     expected[1][aux_id, :, aux_id, :] = jac[1].double()
 
-    assert torch.allclose(actual[0].double(), expected[0], atol=TEST_EPS)
-    assert torch.allclose(actual[1].double(), expected[1], atol=TEST_EPS)
+    torch.testing.assert_close(
+        [actual[0].double(), actual[1].double()],
+        expected,
+        atol=TEST_EPS,
+        rtol=1e-05,
+    )
 
     # Check sparse jacobian matrices
     actual = [
@@ -288,8 +362,12 @@ def check_projection_for_rotate_and_transform(
     ]
 
     expected = jac
-    assert torch.allclose(actual[0], expected[0], atol=TEST_EPS)
-    assert torch.allclose(actual[1], expected[1], atol=TEST_EPS)
+    torch.testing.assert_close(
+        actual,
+        expected,
+        atol=TEST_EPS,
+        rtol=1e-05,
+    )
 
 
 def check_projection_for_compose(
@@ -314,7 +392,12 @@ def check_projection_for_compose(
         )
 
         # Check returns
-        assert torch.allclose(rets.to_matrix(), func(group1.tensor, group2.tensor))
+        torch.testing.assert_close(
+            rets.to_matrix(),
+            func(group1.tensor, group2.tensor),
+            rtol=1e-05,
+            atol=1e-08,
+        )
 
         # Check for dense jacobian matrices
         if dtype == torch.float32:
@@ -345,8 +428,12 @@ def check_projection_for_compose(
         expected[0][aux_id, :, aux_id, :] = jac[0]
         expected[1][aux_id, :, aux_id, :] = jac[1]
 
-        assert torch.allclose(actual[0], expected[0], atol=TEST_EPS)
-        assert torch.allclose(actual[1], expected[1], atol=TEST_EPS)
+        torch.testing.assert_close(
+            actual,
+            expected,
+            atol=TEST_EPS,
+            rtol=1e-05,
+        )
 
         # Check for sparse jacobian matrices
         temp = [
@@ -368,8 +455,12 @@ def check_projection_for_compose(
 
         expected = jac
 
-        assert torch.allclose(actual[0], expected[0], atol=TEST_EPS)
-        assert torch.allclose(actual[1], expected[1], atol=TEST_EPS)
+        torch.testing.assert_close(
+            actual,
+            expected,
+            atol=TEST_EPS,
+            rtol=1e-05,
+        )
 
 
 def check_projection_for_inverse(
@@ -392,7 +483,12 @@ def check_projection_for_inverse(
             jac_raw = jac_raw.float()
 
         # Check returns
-        assert torch.allclose(rets.to_matrix(), func(group.tensor), atol=TEST_EPS)
+        torch.testing.assert_close(
+            rets.to_matrix(),
+            func(group.tensor),
+            atol=TEST_EPS,
+            rtol=1e-05,
+        )
 
         # Check for dense jacobian matrices
         temp = group.project(jac_raw)
@@ -412,7 +508,12 @@ def check_projection_for_inverse(
 
         expected[aux_id, :, aux_id, :] = jac[0]
 
-        assert torch.allclose(actual, expected, atol=TEST_EPS)
+        torch.testing.assert_close(
+            actual,
+            expected,
+            atol=TEST_EPS,
+            rtol=1e-05,
+        )
 
         # Check for sparse jacobian matrices
         temp = group.project(jac_raw[aux_id, :, :, aux_id], is_sparse=True)
@@ -423,7 +524,12 @@ def check_projection_for_inverse(
 
         expected = jac[0]
 
-        assert torch.allclose(actual, expected, atol=TEST_EPS)
+        torch.testing.assert_close(
+            actual,
+            expected,
+            atol=TEST_EPS,
+            rtol=1e-05,
+        )
 
 
 def check_projection_for_exp_map(
@@ -458,7 +564,12 @@ def check_projection_for_exp_map(
         else:
             expected = jac_raw[aux_id, :, aux_id]
 
-        assert torch.allclose(actual[0].double(), expected, atol=atol)
+        torch.testing.assert_close(
+            actual[0].double(),
+            expected,
+            atol=atol,
+            rtol=1e-05,
+        )
 
 
 def check_projection_for_log_map(
@@ -487,7 +598,12 @@ def check_projection_for_log_map(
         actual = []
         _ = group.log_map(jacobians=actual)
 
-        assert torch.allclose(actual[0].double(), expected, atol=atol)
+        torch.testing.assert_close(
+            actual[0].double(),
+            expected,
+            atol=atol,
+            rtol=1e-05,
+        )
 
 
 def check_jacobian_for_local(group0, group1, Group, is_projected=True, atol=TEST_EPS):
@@ -517,8 +633,12 @@ def check_jacobian_for_local(group0, group1, Group, is_projected=True, atol=TEST
     actual = []
     _ = group0.local(group1, jacobians=actual)
 
-    assert torch.allclose(actual[0].double(), expected[0], atol=atol)
-    assert torch.allclose(actual[1].double(), expected[1], atol=atol)
+    torch.testing.assert_close(
+        [actual[0].double(), actual[1].double()],
+        expected,
+        atol=atol,
+        rtol=1e-05,
+    )
 
 
 def check_normalize(group, batch_size, dtype):
@@ -527,7 +647,12 @@ def check_normalize(group, batch_size, dtype):
 
     matrix = group.rand(batch_size, dtype=dtype, generator=rng).tensor
     group_mat = group.normalize(matrix)
-    torch.allclose(group_mat, matrix)
+    torch.testing.assert_close(
+        group_mat,
+        matrix,
+        rtol=1e-4 if dtype == torch.float32 else 1e-5,
+        atol=1e-6 if dtype == torch.float32 else 1e-8,
+    )
 
     matrix = torch.rand(matrix.shape, dtype=dtype)
     group_mat = group.normalize(matrix)
@@ -543,7 +668,9 @@ def check_so3_se3_normalize(group, batch_size, dtype):
     matrix = group.rand(batch_size, dtype=dtype).tensor
     matrix[:, :, 2] *= -1
     group_mat = group.normalize(matrix)
-    torch.allclose(
+    torch.testing.assert_close(
         (group_mat - matrix).norm(dim=[1, 2]),
         2 * torch.ones(matrix.shape[0], dtype=dtype),
+        rtol=1e-05,
+        atol=1e-08,
     )

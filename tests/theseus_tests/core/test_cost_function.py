@@ -59,9 +59,7 @@ def test_default_name_and_ids():
 
 # Adding three formatting options to include coverage for autograd mode resolution
 @pytest.mark.parametrize("autograd_mode", ["DENSE", "loop_batch", AutogradMode.VMAP])
-def test_autodiff_cost_function_error_and_jacobians_shape(autograd_mode):
-    rng = torch.Generator()
-    rng.manual_seed(0)
+def test_autodiff_cost_function_error_and_jacobians_shape(autograd_mode, rng):
     for i in range(100):
         num_optim_vars = np.random.randint(0, 5)
         num_aux_vars = np.random.randint(0, 5)
@@ -108,8 +106,11 @@ def test_autodiff_cost_function_error_and_jacobians_shape(autograd_mode):
                 assert isinstance(arg, th.Variable)
                 assert arg.shape == (batch_size, i + 1) or arg.shape == (1, i + 1)
                 if autograd_mode != AutogradMode.VMAP:
-                    assert arg.tensor.allclose(
-                        variable_values[i] * torch.ones_like(arg.tensor)
+                    torch.testing.assert_close(
+                        arg.tensor,
+                        variable_values[i] * torch.ones_like(arg.tensor),
+                        rtol=1e-05,
+                        atol=1e-08,
                     )
                 ret_val = ret_val + arg.tensor.view(arg.shape[0], -1).mean(
                     dim=1, keepdim=True
@@ -137,13 +138,21 @@ def test_autodiff_cost_function_error_and_jacobians_shape(autograd_mode):
                 autograd_mode=autograd_mode,
             )
             err = cost_function.error()
-            assert err.allclose(
-                variable_values.sum() * torch.ones(batch_size, err_dim), atol=1e-7
+            torch.testing.assert_close(
+                err,
+                variable_values.sum() * torch.ones(batch_size, err_dim),
+                atol=1e-7,
+                rtol=1e-05,
             )
 
             # Now checking the jacobians
             jacobians, err_jac = cost_function.jacobians()
-            assert err_jac.allclose(err)
+            torch.testing.assert_close(
+                err_jac,
+                err,
+                rtol=1e-05,
+                atol=1e-08,
+            )
             assert len(jacobians) == num_optim_vars
             for i in range(num_optim_vars):
                 # variable dim is i + 1 (see MockVar creation line)
@@ -187,9 +196,19 @@ def test_autodiff_cost_function_cost_weight(autograd_mode):
         autograd_mode=autograd_mode,
     )
     assert isinstance(cost_function.weight, ScaleCostWeight)
-    assert torch.allclose(cost_function.weight.scale.tensor, torch.ones(1, 1))
+    torch.testing.assert_close(
+        cost_function.weight.scale.tensor,
+        torch.ones(1, 1),
+        rtol=1e-05,
+        atol=1e-08,
+    )
     weighted_error = cost_function.weighted_error()
-    assert torch.allclose(weighted_error, torch.ones(batch_size, 1))
+    torch.testing.assert_close(
+        weighted_error,
+        torch.ones(batch_size, 1),
+        rtol=1e-05,
+        atol=1e-08,
+    )
 
     # test overriding default CostWeight
     for i in range(10):
@@ -203,12 +222,21 @@ def test_autodiff_cost_function_cost_weight(autograd_mode):
             aux_vars=aux_vars,
         )
         assert cost_function.weight is cost_weight
-        assert torch.allclose(
-            cost_function.weight.the_data.tensor, cost_weight_value
-        )  # type: ignore
+        torch.testing.assert_close(
+            cost_function.weight.the_data.tensor,
+            cost_weight_value,
+            rtol=1e-05,
+            atol=1e-08,
+        )
+        # type: ignore
         weighted_error = cost_function.weighted_error()
         direct_error_computation = cost_weight_value * torch.ones(batch_size, 1)
-        assert torch.allclose(weighted_error, direct_error_computation)
+        torch.testing.assert_close(
+            weighted_error,
+            direct_error_computation,
+            rtol=1e-05,
+            atol=1e-08,
+        )
 
 
 @pytest.mark.parametrize(
@@ -319,7 +347,12 @@ def test_autodiff_cost_function_error_and_jacobians_shape_on_SO3(autograd_mode):
 
             # Now checking the jacobians
             jacobians, err_jac = cost_function.jacobians()
-            assert err_jac.allclose(err)
+            torch.testing.assert_close(
+                err_jac,
+                err,
+                rtol=1e-05,
+                atol=1e-08,
+            )
             assert len(jacobians) == num_vars
             for i in range(num_vars):
                 # variable dim is i + 1 (see MockVar creation line)
@@ -385,6 +418,16 @@ def test_autodiff_cost_function_error_and_jacobians_value_on_SO3(autograd_mode):
             for n in torch.arange(num_vars):
                 jac = []  # type: ignore
                 err_expected += optim_vars[n].rotate(aux_vars[n], jacobians=jac).tensor
-                assert torch.allclose(jac_actual[n], jac[0])
+                torch.testing.assert_close(
+                    jac_actual[n],
+                    jac[0],
+                    rtol=1e-05,
+                    atol=1e-08,
+                )
 
-            assert torch.allclose(err_actual, err_expected)
+            torch.testing.assert_close(
+                err_actual,
+                err_expected,
+                rtol=1e-05,
+                atol=1e-08,
+            )

@@ -47,8 +47,18 @@ def test_scale_cost_weight():
             def _check(cw):
                 cf1 = th.Difference(v1, z, cw)
                 jacobians, error = cf1.weighted_jacobians_error()
-                assert error.allclose(expected_err)
-                assert jacobians[0].allclose(expected_jac)
+                torch.testing.assert_close(
+                    error,
+                    expected_err,
+                    rtol=1e-05,
+                    atol=1e-08,
+                )
+                torch.testing.assert_close(
+                    jacobians[0],
+                    expected_jac,
+                    rtol=1e-05,
+                    atol=1e-08,
+                )
 
             _check(th.ScaleCostWeight(scale))
             _check(th.ScaleCostWeight(torch.ones(1) * scale))
@@ -65,8 +75,18 @@ def test_scale_cost_weight():
 
             cf1 = th.Difference(v1, z, th.ScaleCostWeight(batched_scale))
             jacobians, error = cf1.weighted_jacobians_error()
-            assert error.allclose(expected_err)
-            assert jacobians[0].allclose(expected_jac)
+            torch.testing.assert_close(
+                error,
+                expected_err,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                jacobians[0],
+                expected_jac,
+                rtol=1e-05,
+                atol=1e-08,
+            )
 
 
 def test_diagonal_cost_weight():
@@ -86,8 +106,18 @@ def test_diagonal_cost_weight():
             def _check(cw):
                 cf1 = th.Difference(v1, z, cw)
                 jacobians, error = cf1.weighted_jacobians_error()
-                assert error.allclose(expected_err)
-                assert jacobians[0].allclose(expected_jac)
+                torch.testing.assert_close(
+                    error,
+                    expected_err,
+                    rtol=1e-05,
+                    atol=1e-08,
+                )
+                torch.testing.assert_close(
+                    jacobians[0],
+                    expected_jac,
+                    rtol=1e-05,
+                    atol=1e-08,
+                )
 
             diagonal = diagonal.unsqueeze(0)  # add batch dimension
             _check(th.DiagonalCostWeight(diagonal.tolist()))
@@ -105,5 +135,15 @@ def test_diagonal_cost_weight():
 
             cf1 = th.Difference(v1, z, th.DiagonalCostWeight(batched_diagonal))
             jacobians, error = cf1.weighted_jacobians_error()
-            assert error.allclose(expected_err)
-            assert jacobians[0].allclose(expected_jac)
+            torch.testing.assert_close(
+                error,
+                expected_err,
+                rtol=1e-05,
+                atol=1e-08,
+            )
+            torch.testing.assert_close(
+                jacobians[0],
+                expected_jac,
+                rtol=1e-05,
+                atol=1e-08,
+            )

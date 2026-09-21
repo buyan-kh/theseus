@@ -3,14 +3,15 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import pytest
 import os
+
+import pytest
 import torch
 
 from torchkin.forward_kinematics import (
+    ForwardKinematicsFactory,
     Robot,
     get_forward_kinematics_fns,
-    ForwardKinematicsFactory,
 )
 from torchlie.functional import SE3
 from torchlie.functional.constants import TEST_EPS
@@ -21,14 +22,12 @@ urdf_path = os.path.join(os.path.dirname(__file__), URDF_REL_PATH)
 
 @pytest.mark.parametrize("batch_size", [1, 20, 40])
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
-def test_backward(batch_size: int, dtype: torch.dtype):
+def test_backward(batch_size: int, dtype: torch.dtype, rng):
     robot = Robot.from_urdf_file(urdf_path, dtype)
     selected_links = ["panda_link2", "panda_link5", "panda_virtual_ee_link"]
     _, fk_impl, *_ = ForwardKinematicsFactory(robot, selected_links)
     fk, *_ = get_forward_kinematics_fns(robot, selected_links)
 
-    rng = torch.Generator()
-    rng.manual_seed(0)
     angles = torch.rand(batch_size, robot.dof, generator=rng, dtype=dtype)
 
     jacs_impl = torch.autograd.functional.jacobian(fk_impl, angles, vectorize=True)
@@ -53,7 +52,7 @@ def test_backward(batch_size: int, dtype: torch.dtype):
 
 @pytest.mark.parametrize("batch_size", [1, 20, 40])
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
-def test_jacobian(batch_size: int, dtype: torch.dtype):
+def test_jacobian(batch_size: int, dtype: torch.dtype, rng):
     robot = Robot.from_urdf_file(urdf_path, dtype)
     selected_links = ["panda_link2", "panda_link5", "panda_virtual_ee_link"]
     fk, jfk_b, _ = get_forward_kinematics_fns(robot, selected_links)
@@ -61,8 +60,6 @@ def test_jacobian(batch_size: int, dtype: torch.dtype):
     def fk_vmap(t):
         return tuple(pose.squeeze(0) for pose in fk(t.unsqueeze(0)))
 
-    rng = torch.Generator()
-    rng.manual_seed(0)
     angles = torch.rand(batch_size, robot.dof, generator=rng, dtype=dtype)
 
     jacs_actual, poses = jfk_b(angles)
@@ -89,7 +86,7 @@ def test_jacobian(batch_size: int, dtype: torch.dtype):
 
 @pytest.mark.parametrize("batch_size", [1, 20, 40])
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
-def test_vmap_for_jacobian(batch_size: int, dtype: torch.dtype):
+def test_vmap_for_jacobian(batch_size: int, dtype: torch.dtype, rng):
     robot = Robot.from_urdf_file(urdf_path, dtype)
     selected_links = ["panda_virtual_ee_link"]
     fk, jfk_b, _ = get_forward_kinematics_fns(robot, selected_links)
@@ -101,8 +98,6 @@ def test_vmap_for_jacobian(batch_size: int, dtype: torch.dtype):
     def fun_vmap(angles):
         return fun(angles.unsqueeze(0)).squeeze(0)
 
-    rng = torch.Generator()
-    rng.manual_seed(0)
     angles = torch.rand(batch_size, robot.dof, generator=rng, dtype=dtype)
 
     sels = range(batch_size)
